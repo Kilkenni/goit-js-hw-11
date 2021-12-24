@@ -149,11 +149,14 @@ async function loadNextPage(event) {
         if (searchResult.statusText != "OK") {
             throw console.error("BAD PIXABAY RESPONSE STATUS: " + searchResult.status);
         }
-        //update number of found images to handle pages
-        //pageCounter.setEntries(searchResult.data.totalHits);
 
-        //console.log(searchResult);
+        
         renderImages(searchResult.data.hits); //render new page
+        
+        //smooth scrolling to new results
+        const cardHeight = galleryElem.firstElementChild.getBoundingClientRect().height;
+        window.scrollBy({ top: cardHeight * 2, behavior: "smooth", }); //scrolling down by 2 rows
+        
         enableLoadMore(true); //enable button
     }
     catch (error) {
