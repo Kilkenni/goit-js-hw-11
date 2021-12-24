@@ -87,6 +87,11 @@ async function renderImages(PixabaySearchResults) {
     imageLightBox.refresh(); //force update SimpleLightbox
 }
 
+function ServerError(message) {
+    this.message = message;
+    return this;
+}
+
 async function searchImages(event) {
     event.preventDefault();
     enableLoadMore(false);
@@ -104,7 +109,8 @@ async function searchImages(event) {
     try { 
         const searchResult = await axios(AxiosSearchParams);
         if (searchResult.statusText != "OK") {
-            throw console.error("BAD PIXABAY RESPONSE STATUS: " + searchResult.status);
+            throw new ServerError("Pixabay response: " + searchResult.statusText + " " + "BAD PIXABAY RESPONSE STATUS: " + searchResult.status);
+            //throw console.error("BAD PIXABAY RESPONSE STATUS: " + searchResult.status);
         }
         //update number of found images to handle pages
         pageCounter.setEntries(searchResult.data.totalHits);
@@ -147,7 +153,8 @@ async function loadNextPage(event) {
     try { 
         const searchResult = await axios(AxiosSearchParams);
         if (searchResult.statusText != "OK") {
-            throw console.error("BAD PIXABAY RESPONSE STATUS: " + searchResult.status);
+            throw new ServerError("Pixabay response: " + searchResult.statusText + " " + "BAD PIXABAY RESPONSE STATUS: " + searchResult.status);
+            //throw console.error("BAD PIXABAY RESPONSE STATUS: " + searchResult.status);
         }
 
         
