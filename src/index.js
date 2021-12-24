@@ -4,6 +4,11 @@ import Notiflix from 'notiflix';
 import SimpleLightbox from "simplelightbox";
 import "simplelightbox/dist/simple-lightbox.min.css";
 
+//module for counting pages
+const { Pagination } = require("./js/Pagination");
+//module for forming correct PixabayURL
+const { PixabayURL } = require("./js/PixabayURL");
+
 const formSearchInput = document.querySelector(`#search-form > input`);
 const formBtnSubmit = document.querySelector(`#search-form > button`);
 const btnLoadNextPage = document.querySelector(".load-more");
@@ -12,91 +17,24 @@ const galleryElem = document.querySelector(".gallery");
 formBtnSubmit.addEventListener("click", searchImages);
 btnLoadNextPage.addEventListener("click", loadNextPage);
 
-btnLoadNextPage.disabled = true;
-
-function sanitizeString(dirtyString) {
-    return dirtyString.trim().replaceAll(/ +/g, '+');
-    //some RegExp magic. While it's a homemade one, it should trim spaces at the ends and replace inner spaces with a '+'
-    //RegEx *should* do this: search one or more [space] (note the 'Kleene plus') and replace. 
-}
-
-class PixabayURL {
-    constructor(searchString , page, per_page) {
-        this.key = "24889983-c5e39d0275da98cda54faa42b"; //твой уникальный ключ доступа к API.
-        this.q = sanitizeString(searchString); //термин для поиска. То, что будет вводить пользователь.
-        this.image_type = "photo"; //тип изображения
-        this.orientation = "horizontal"; //ориентация фотографии
-        this.safesearch = "true"; //фильтр по возрасту
-        this.page = page; //current page
-        this.per_page = per_page; //images per page
-    }
-
-    toString() {
-        let asString = Object.keys(this).reduce((urlPart, urlCurrentParam) => {
-            return urlPart + "&" + urlCurrentParam + "=" + this[urlCurrentParam];   
-        }, "");
-
-        asString = "https://pixabay.com/api/?" + asString.slice(1);
-
-        return asString;
-    }
-};
-
-class Pagination { //singleton!
-    currentSearchString;
-    currentPage;
-    perPage = 40;
-    #foundEntries = 0;
-
-    constructor(currentSearchString = "") {
-        if (typeof Pagination.instance === 'object') {
-            return Pagination.instance;
-        }
-        this.currentSearchString = currentSearchString;
-        this.currentPage = 1;
-        //this.perPage = 40;
-
-        Pagination.instance = this;
-        return Pagination.instance;
-    }
-
-    setEntries(foundEntries) {
-        this.#foundEntries = foundEntries;
-    }
-
-    resetNewPage(searchString) {
-        this.currentSearchString = searchString;
-        this.currentPage = 1;
-    }
-
-    checkNewPage() {
-        if (this.#foundEntries <= this.currentPage * this.perPage) {
-            return false; //we're at the last page
-            
-        }
-        else {
-            return true; //we can do another page
-        }
-    }
-
-    updateNewPage(searchString = this.currentSearchString) {
-        if (searchString === this.currentSearchString) {
-            if (!this.checkNewPage) {
-                return this; //we're at the last page, early exit
-            }
-            this.currentPage += 1; //switch to new page if searchString is the same. This is default behaviour
-            return this;
-        }
-        else {
-            this.resetNewPage(searchString); //new search
-            return this;
-        }
-    }
-}
+enableLoadMore(false);
 
 const pageCounter = new Pagination();
 const imageLightBox = new SimpleLightbox('.gallery a', {captionsData: `alt`, captionDelay:500, overlay:true});
 //console.log(pageCounter);
+
+function enableLoadMore(enable) {
+    if (enable) {
+        btnLoadNextPage.disabled = false;
+        btnLoadNextPage.style.opacity = "1";
+        btnLoadNextPage.style.visibility = "visible";
+    }
+    else {
+        btnLoadNextPage.disabled = true;
+        btnLoadNextPage.style.opacity = "0";
+        btnLoadNextPage.style.visibility = "hidden";
+    }
+}
 
 async function renderImages(PixabaySearchResults) {
     /* Accepts data.hits from Axios only! */
@@ -151,7 +89,7 @@ async function renderImages(PixabaySearchResults) {
 
 async function searchImages(event) {
     event.preventDefault();
-    btnLoadNextPage.disabled = true;
+    enableLoadMore(false);
     pageCounter.resetNewPage(formSearchInput.value);
 
     const currentPixabayURL = new PixabayURL(pageCounter.currentSearchString, pageCounter.currentPage, pageCounter.perPage);
@@ -178,14 +116,11 @@ async function searchImages(event) {
             galleryElem.innerHTML = ""; //reset gallery
             renderImages(searchResult.data.hits);
 
-            btnLoadNextPage.disabled = false;
+            enableLoadMore(true);
         }
         else {
             Notiflix.Notify.warning("Sorry, there are no images matching your search query. Please try again.");
         }
-        //console.log(formSearchInput.value);
-
-        console.log(pageCounter.checkNewPage());
     }
     catch (error) {
         console.log(error.message);
@@ -193,14 +128,13 @@ async function searchImages(event) {
 }
 
 async function loadNextPage(event) {
+    enableLoadMore(false);
+
     if (!pageCounter.checkNewPage()) {
-        //there is no more results, disable "Load More" button
-        btnLoadNextPage.disabled = true;
+        //there is no more results, that's it
         Notiflix.Notify.warning("We're sorry, but you've reached the end of search results.");
         return; //early exit
     }
-
-    btnLoadNextPage.disabled = true;
 
     pageCounter.updateNewPage();
     const currentPixabayURL = new PixabayURL(pageCounter.currentSearchString, pageCounter.currentPage, pageCounter.perPage); //forming URL with next page in mind
@@ -220,7 +154,7 @@ async function loadNextPage(event) {
 
         //console.log(searchResult);
         renderImages(searchResult.data.hits); //render new page
-        btnLoadNextPage.disabled = false; //enable button
+        enableLoadMore(true); //enable button
     }
     catch (error) {
         console.log(error.message);
