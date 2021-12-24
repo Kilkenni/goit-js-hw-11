@@ -108,7 +108,8 @@ async function searchImages(event) {
 
     try { 
         const searchResult = await axios(AxiosSearchParams);
-        if (searchResult.statusText != "OK") {
+
+        if (searchResult.statusText != "OK" || searchResult.status != 200) {
             throw new ServerError("Pixabay response: " + searchResult.statusText + " " + "BAD PIXABAY RESPONSE STATUS: " + searchResult.status);
             //throw console.error("BAD PIXABAY RESPONSE STATUS: " + searchResult.status);
         }
@@ -152,12 +153,12 @@ async function loadNextPage(event) {
 
     try { 
         const searchResult = await axios(AxiosSearchParams);
-        if (searchResult.statusText != "OK") {
+
+        if (searchResult.statusText != "OK" || searchResult.status != 200) {
             throw new ServerError("Pixabay response: " + searchResult.statusText + " " + "BAD PIXABAY RESPONSE STATUS: " + searchResult.status);
             //throw console.error("BAD PIXABAY RESPONSE STATUS: " + searchResult.status);
         }
 
-        
         renderImages(searchResult.data.hits); //render new page
         
         //smooth scrolling to new results
